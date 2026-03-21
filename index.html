@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HR Assistant · Chatbot Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --border: #e8e8e4;
+    --border-light: #f0f0ec;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b66;
+    --text-muted: #a8a8a2;
+    --accent: #1a1a18;
+    --accent-hover: #333330;
+    --bubble-user: #1a1a18;
+    --bubble-bot: #f0f0ec;
+    --bubble-user-text: #ffffff;
+    --bubble-bot-text: #1a1a18;
+    --sidebar-w: 260px;
+    --header-h: 56px;
+    --radius: 16px;
+    --radius-sm: 8px;
+    --font: 'IBM Plex Sans Thai', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-primary);
+    display: flex;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header {
+    padding: 20px 18px 16px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .brand-icon {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+  }
+
+  .brand-name {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-primary);
+  }
+
+  .brand-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+    font-family: var(--font-mono);
+  }
+
+  .new-chat-btn {
+    width: 100%;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+  }
+  .new-chat-btn:hover { background: var(--border-light); color: var(--text-primary); }
+
+  .sidebar-section {
+    padding: 12px 18px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .chat-history { flex: 1; overflow-y: auto; padding: 0 10px 10px; }
+  .chat-history::-webkit-scrollbar { width: 4px; }
+  .chat-history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .history-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.12s;
+    color: var(--text-secondary);
+    font-size: 12.5px;
+  }
+  .history-item:hover { background: var(--bg); color: var(--text-primary); }
+  .history-item.active { background: var(--bg); color: var(--text-primary); font-weight: 500; }
+
+  .history-item-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .sidebar-nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    transition: all 0.12s;
+  }
+  .sidebar-nav-item:hover { background: var(--bg); color: var(--text-primary); }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--surface);
+    min-width: 0;
+  }
+
+  /* HEADER */
+  .header {
+    height: var(--header-h);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .header-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .header-badge {
+    display: flex; align-items: center; gap: 5px;
+    padding: 3px 9px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+  }
+
+  .tab-group {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .tab-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .tab-btn.active { background: var(--surface); color: var(--text-primary); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .tab-btn:hover:not(.active) { color: var(--text-primary); }
+
+  /* VIEWS */
+  .view { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .view.active { display: flex; }
+
+  /* CHAT VIEW */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scroll-behavior: smooth;
+  }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    max-width: 680px;
+  }
+  .msg-row.bot { align-self: flex-start; }
+  .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .avatar.user-av { background: var(--accent); border-color: var(--accent); }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 14px;
+    max-width: 480px;
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  .bot .bubble {
+    background: var(--bubble-bot);
+    color: var(--bubble-bot-text);
+    border-bottom-left-radius: 4px;
+  }
+  .user .bubble {
+    background: var(--bubble-user);
+    color: var(--bubble-user-text);
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    padding: 0 4px 2px;
+    font-family: var(--font-mono);
+  }
+
+  .typing-indicator {
+    display: flex; align-items: center; gap: 4px;
+    padding: 12px 16px;
+    background: var(--bubble-bot);
+    border-radius: 14px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* INPUT AREA */
+  .input-area {
+    padding: 16px 32px 20px;
+    border-top: 1px solid var(--border-light);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .input-box {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    transition: border-color 0.15s;
+  }
+  .input-box:focus-within { border-color: #c0c0bb; }
+
+  .input-box textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    resize: none;
+    font-family: var(--font);
+    font-size: 13.5px;
+    color: var(--text-primary);
+    outline: none;
+    max-height: 120px;
+    min-height: 20px;
+    line-height: 1.5;
+  }
+  .input-box textarea::placeholder { color: var(--text-muted); }
+
+  .input-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+  .icon-btn {
+    width: 32px; height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.12s;
+  }
+  .icon-btn:hover { background: var(--border-light); color: var(--text-secondary); }
+
+  .send-btn {
+    width: 32px; height: 32px;
+    border: none;
+    background: var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    transition: background 0.12s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: var(--accent-hover); }
+
+  .input-hint {
+    padding: 6px 2px 0;
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .quick-actions {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+
+  .quick-pill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 11px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: var(--font);
+  }
+  .quick-pill:hover { border-color: #c0c0bb; color: var(--text-primary); background: var(--bg); }
+
+  /* HR FORM VIEW */
+  .form-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .form-view::-webkit-scrollbar { width: 4px; }
+  .form-view::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .form-header { margin-bottom: 28px; }
+
+  .form-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .form-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .form-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 600px;
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+
+  .field label {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  .required { color: var(--text-muted); font-weight: 400; }
+
+  .field input,
+  .field textarea {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: var(--font);
+    font-size: 13.5px;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus,
+  .field textarea:focus { border-color: #c0c0bb; }
+  .field input::placeholder,
+  .field textarea::placeholder { color: var(--text-muted); }
+
+  .field textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+  .form-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .form-note {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  .submit-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 9px 20px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: background 0.12s;
+  }
+  .submit-btn:hover { background: var(--accent-hover); }
+
+  .success-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #15803d;
+    max-width: 600px;
+  }
+  .success-banner.show { display: flex; }
+
+  @media (max-width: 640px) {
+    .sidebar { display: none; }
+    .form-grid { grid-template-columns: 1fr; }
+    .messages { padding: 16px; }
+    .input-area { padding: 12px 16px 16px; }
+    .form-view { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">HR Assistant</div>
+        <div class="brand-sub">n8n workflow · demo</div>
+      </div>
+    </div>
+    <button class="new-chat-btn" onclick="newChat()">
+      <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      แชทใหม่
+    </button>
+  </div>
+
+  <div class="sidebar-section">ประวัติการสนทนา</div>
+  <div class="chat-history" id="chatHistory"></div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-nav-item">
+      <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+      บัญชีของฉัน
+    </div>
+    <div class="sidebar-nav-item">
+      <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 1 0 0 14.14"/>
+      </svg>
+      ตั้งค่า
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <header class="header">
+    <div class="header-title" id="headerTitle">สนทนากับ HR Assistant</div>
+    <div class="header-badge">
+      <div class="status-dot"></div>
+      Online
+    </div>
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchTab('chat', this)">
+        <svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        แชท
+      </button>
+      <button class="tab-btn" onclick="switchTab('form', this)">
+        <svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        แจ้งเรื่องถึง HR
+      </button>
+    </div>
+  </header>
+
+  <!-- CHAT VIEW -->
+  <div class="view active" id="view-chat">
+    <div class="messages" id="messages">
+      <div class="msg-row bot">
+        <div class="avatar">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="bubble">สวัสดีครับ ผมคือ HR Assistant ยินดีให้บริการ<br/>คุณต้องการสอบถามเรื่องอะไรครับ?</div>
+          <div class="msg-time" id="initTime"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="quick-actions">
+        <button class="quick-pill" onclick="sendQuick('ลาป่วยต้องทำอย่างไร?')">
+          <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          ลาป่วย
+        </button>
+        <button class="quick-pill" onclick="sendQuick('เช็คสิทธิ์การลาประจำปี')">
+          <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          วันลาคงเหลือ
+        </button>
+        <button class="quick-pill" onclick="sendQuick('วันหยุดประจำปีมีวันอะไรบ้าง?')">
+          <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          วันหยุด
+        </button>
+        <button class="quick-pill" onclick="sendQuick('ขั้นตอนการเบิกค่าใช้จ่าย')">
+          <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          เบิกค่าใช้จ่าย
+        </button>
+      </div>
+      <div class="input-box">
+        <textarea id="chatInput" rows="1" placeholder="พิมพ์คำถามของคุณที่นี่..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <div class="input-actions">
+          <button class="icon-btn" title="แนบไฟล์">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
+          <button class="send-btn" onclick="sendMessage()" title="ส่ง">
+            <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="input-hint">
+        <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        กด Enter เพื่อส่ง · Shift+Enter เพื่อขึ้นบรรทัดใหม่
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM VIEW -->
+  <div class="view" id="view-form">
+    <div class="form-view">
+      <div class="form-header">
+        <div class="form-title">แจ้งเรื่องถึง HR</div>
+        <div class="form-desc">กรอกข้อมูลด้านล่างเพื่อส่งคำถามหรือเรื่องร้องเรียนถึงทีม HR โดยตรง<br/>ทีมงานจะติดต่อกลับภายใน 1–2 วันทำการ</div>
+      </div>
+
+      <div class="success-banner" id="successBanner">
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        ส่งข้อมูลเรียบร้อยแล้ว ทีม HR จะติดต่อกลับโดยเร็ว
+      </div>
+
+      <div class="form-card">
+        <div class="form-grid">
+
+          <div class="field">
+            <label>
+              <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              รหัสพนักงาน <span class="required">*</span>
+            </label>
+            <input type="text" id="empId" placeholder="เช่น EMP-00123" />
+          </div>
+
+          <div class="field">
+            <label>
+              <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+              </svg>
+              ชื่อผู้แจ้ง <span class="required">*</span>
+            </label>
+            <input type="text" id="empName" placeholder="ชื่อ-นามสกุล" />
+          </div>
+
+          <div class="field">
+            <label>
+              <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.86a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              เบอร์โทร <span class="required">*</span>
+            </label>
+            <input type="tel" id="empPhone" placeholder="เช่น 081-234-5678" />
+          </div>
+
+          <div class="field">
+            <label>
+              <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              </svg>
+              อีเมล <span class="required">*</span>
+            </label>
+            <input type="email" id="empEmail" placeholder="example@company.com" />
+          </div>
+
+          <div class="field full">
+            <label>
+              <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              คำถาม / รายละเอียด <span class="required">*</span>
+            </label>
+            <textarea id="empQuestion" placeholder="อธิบายรายละเอียดของเรื่องที่ต้องการแจ้ง HR..."></textarea>
+          </div>
+
+        </div>
+
+        <div class="form-footer">
+          <div class="form-note">
+            <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            ข้อมูลของคุณจะถูกเก็บเป็นความลับ
+          </div>
+          <button class="submit-btn" onclick="submitForm()">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            ส่งเรื่องถึง HR
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  let sessions = [
+    { id: 1, title: 'วันลาป่วยคงเหลือ', time: '09:14' },
+    { id: 2, title: 'ขั้นตอนการลาคลอด', time: 'เมื่อวาน' },
+    { id: 3, title: 'สิทธิ์ประกันสุขภาพ', time: 'เมื่อวาน' },
+    { id: 4, title: 'การเบิกค่าเดินทาง', time: '15 ม.ค.' },
+  ];
+  let activeSession = null;
+
+  const botReplies = [
+    'ขอบคุณสำหรับคำถามครับ ให้ผมตรวจสอบข้อมูลให้นะครับ...',
+    'เรื่องนี้ทีม HR ดูแลอยู่ครับ สามารถยื่นแบบฟอร์มผ่านระบบ HR Portal ได้เลยนะครับ',
+    'ตามนโยบายของบริษัท สิทธิ์การลาป่วยคือ 30 วันต่อปีครับ',
+    'คุณสามารถดูรายละเอียดเพิ่มเติมได้ที่ HR Handbook หรือติดต่อทีม HR โดยตรงครับ',
+    'หากมีข้อสงสัยเพิ่มเติม สามารถถามได้เลยนะครับ ยินดีช่วยเสมอ',
+  ];
+
+  document.getElementById('initTime').textContent = nowTime();
+  renderHistory();
+
+  function nowTime() {
+    return new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderHistory() {
+    const el = document.getElementById('chatHistory');
+    el.innerHTML = sessions.map(s => `
+      <div class="history-item ${activeSession === s.id ? 'active' : ''}" onclick="loadSession(${s.id})">
+        <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="history-item-text">${s.title}</span>
+        <span class="history-time">${s.time}</span>
+      </div>
+    `).join('');
+  }
+
+  function loadSession(id) {
+    activeSession = id;
+    renderHistory();
+  }
+
+  function newChat() {
+    const id = Date.now();
+    sessions.unshift({ id, title: 'แชทใหม่', time: nowTime() });
+    activeSession = id;
+    renderHistory();
+    document.getElementById('messages').innerHTML = `
+      <div class="msg-row bot">
+        <div class="avatar">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="bubble">สวัสดีครับ มีอะไรให้ผมช่วยได้บ้างครับ?</div>
+          <div class="msg-time">${nowTime()}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function switchTab(view, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.getElementById('headerTitle').textContent =
+      view === 'chat' ? 'สนทนากับ HR Assistant' : 'แจ้งเรื่องถึง HR';
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function sendQuick(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+  }
+  const WEBHOOK_URL = 'https://bombam.app.n8n.cloud/webhook/6f17dce6-3aab-4dd9-93ca-159e8f85d1e6/chat';
+
+    async function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      appendMsg('user', text);
+      input.value = '';
+      input.style.height = 'auto';
+      showTyping();
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatInput: text, sessionId: 'web_' + Date.now() })
+        });
+        const data = await res.json();
+        const reply = data.output || data.text || data.response || data.message || JSON.stringify(data);
+        removeTyping();
+        appendMsg('bot', reply);
+      } catch (err) {
+        removeTyping();
+        appendMsg('bot', 'เกิดข้อผิดพลาด: ' + err.message);
+      }
+      const s = sessions.find(x => x.id === activeSession);
+      if (s && s.title === 'แชทใหม่') {
+        s.title = text.slice(0, 18) + (text.length > 18 ? '...' : '');
+        renderHistory();
+      }
+    }
+
+
+
+  function appendMsg(role, text) {
+    const msgs = document.getElementById('messages');
+    const isUser = role === 'user';
+    const avatarIcon = isUser
+      ? `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`
+      : `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+    const div = document.createElement('div');
+    div.className = `msg-row ${isUser ? 'user' : 'bot'}`;
+    div.innerHTML = `
+      <div class="avatar ${isUser ? 'user-av' : ''}">${avatarIcon}</div>
+      <div>
+        <div class="bubble">${text}</div>
+        <div class="msg-time">${nowTime()}</div>
+      </div>
+    `;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('messages');
+    const el = document.createElement('div');
+    el.className = 'msg-row bot';
+    el.id = 'typingRow';
+    el.innerHTML = `
+      <div class="avatar">
+        <svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    `;
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typingRow');
+    if (el) el.remove();
+  }
+
+  function submitForm() {
+    const fields = ['empId','empName','empPhone','empEmail','empQuestion'];
+    for (let i = 0; i < fields.length; i++) {
+      if (!document.getElementById(fields[i]).value.trim()) {
+        document.getElementById(fields[i]).focus();
+        return;
+      }
+    }
+    document.getElementById('successBanner').classList.add('show');
+    fields.forEach(f => { document.getElementById(f).value = ''; });
+    setTimeout(() => document.getElementById('successBanner').classList.remove('show'), 5000);
+  }
+</script>
+</body>
+</html>

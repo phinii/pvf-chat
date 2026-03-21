@@ -126,6 +126,7 @@
     transition: background 0.12s;
     color: var(--text-secondary);
     font-size: 12.5px;
+    position: relative;
   }
   .history-item:hover { background: var(--bg); color: var(--text-primary); }
   .history-item.active { background: var(--bg); color: var(--text-primary); font-weight: 500; }
@@ -142,7 +143,29 @@
     color: var(--text-muted);
     font-family: var(--font-mono);
     flex-shrink: 0;
+    transition: opacity 0.12s;
   }
+  .history-item:hover .history-time { opacity: 0; }
+
+  /* ปุ่มลบประวัติแชท */
+  .delete-btn {
+    position: absolute;
+    right: 8px;
+    width: 20px; height: 20px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    padding: 0;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+  .history-item:hover .delete-btn { display: flex; }
+  .delete-btn:hover { background: #fee2e2; color: #dc2626; }
 
   .sidebar-footer {
     padding: 12px 18px;
@@ -284,6 +307,31 @@
     color: var(--bubble-user-text);
     border-bottom-right-radius: 4px;
   }
+
+  .bubble strong { font-weight: 600; }
+  .bubble em { font-style: italic; }
+  .bubble .md-h3 {
+    font-weight: 600;
+    font-size: 13.5px;
+    margin-top: 10px;
+    margin-bottom: 2px;
+    display: block;
+  }
+  .bubble .md-li {
+    display: flex;
+    gap: 6px;
+    margin: 2px 0;
+    align-items: flex-start;
+  }
+  .bubble .md-li::before {
+    content: '·';
+    flex-shrink: 0;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .bubble p { margin: 4px 0; }
+  .bubble p:first-child { margin-top: 0; }
+  .bubble p:last-child { margin-bottom: 0; }
 
   .msg-time {
     font-size: 10px;
@@ -675,7 +723,6 @@
 
       <div class="form-card">
         <div class="form-grid">
-
           <div class="field">
             <label>
               <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -685,7 +732,6 @@
             </label>
             <input type="text" id="empId" placeholder="เช่น EMP-00123" />
           </div>
-
           <div class="field">
             <label>
               <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -695,7 +741,6 @@
             </label>
             <input type="text" id="empName" placeholder="ชื่อ-นามสกุล" />
           </div>
-
           <div class="field">
             <label>
               <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -705,7 +750,6 @@
             </label>
             <input type="tel" id="empPhone" placeholder="เช่น 081-234-5678" />
           </div>
-
           <div class="field">
             <label>
               <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -715,7 +759,6 @@
             </label>
             <input type="email" id="empEmail" placeholder="example@company.com" />
           </div>
-
           <div class="field full">
             <label>
               <svg class="icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -725,9 +768,7 @@
             </label>
             <textarea id="empQuestion" placeholder="อธิบายรายละเอียดของเรื่องที่ต้องการแจ้ง HR..."></textarea>
           </div>
-
         </div>
-
         <div class="form-footer">
           <div class="form-note">
             <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -748,76 +789,138 @@
 </main>
 
 <script>
+  // ============================================================
+  // MARKDOWN PARSER
+  // ============================================================
+  function parseMarkdown(text) {
+    const escape = s => s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const lines = text.split('\n');
+    let html = '';
+    let i = 0;
+    while (i < lines.length) {
+      let line = lines[i];
+      if (line.trim() === '') {
+        if (html && !html.endsWith('<div style="margin-top:6px"></div>')) {
+          html += '<div style="margin-top:6px"></div>';
+        }
+        i++; continue;
+      }
+      if (/^###\s+(.+)/.test(line)) { html += '<span class="md-h3">' + inlineFormat(escape(line.replace(/^###\s+/, ''))) + '</span>'; i++; continue; }
+      if (/^##\s+(.+)/.test(line))  { html += '<span class="md-h3">' + inlineFormat(escape(line.replace(/^##\s+/, '')))  + '</span>'; i++; continue; }
+      if (/^#\s+(.+)/.test(line))   { html += '<span class="md-h3">' + inlineFormat(escape(line.replace(/^#\s+/, '')))   + '</span>'; i++; continue; }
+      if (/^[\-\*\xb7]\s+(.+)/.test(line)) { html += '<div class="md-li">' + inlineFormat(escape(line.replace(/^[\-\*\xb7]\s+/, ''))) + '</div>'; i++; continue; }
+      if (/^\d+\.\s+(.+)/.test(line))      { html += '<div class="md-li">' + inlineFormat(escape(line.replace(/^\d+\.\s+/, '')))      + '</div>'; i++; continue; }
+      html += '<p>' + inlineFormat(escape(line)) + '</p>';
+      i++;
+    }
+    return html;
+  }
+
+  function inlineFormat(text) {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code style="background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px">$1</code>');
+  }
+  // ============================================================
+
+  // sessions เก็บ metadata; messageStore เก็บ messages แยกตาม session id
   let sessions = [
     { id: 1, title: 'วันลาป่วยคงเหลือ', time: '09:14' },
     { id: 2, title: 'ขั้นตอนการลาคลอด', time: 'เมื่อวาน' },
     { id: 3, title: 'สิทธิ์ประกันสุขภาพ', time: 'เมื่อวาน' },
     { id: 4, title: 'การเบิกค่าเดินทาง', time: '15 ม.ค.' },
   ];
-  let activeSession = null;
 
-  const botReplies = [
-    'ขอบคุณสำหรับคำถามครับ ให้ผมตรวจสอบข้อมูลให้นะครับ...',
-    'เรื่องนี้ทีม HR ดูแลอยู่ครับ สามารถยื่นแบบฟอร์มผ่านระบบ HR Portal ได้เลยนะครับ',
-    'ตามนโยบายของบริษัท สิทธิ์การลาป่วยคือ 30 วันต่อปีครับ',
-    'คุณสามารถดูรายละเอียดเพิ่มเติมได้ที่ HR Handbook หรือติดต่อทีม HR โดยตรงครับ',
-    'หากมีข้อสงสัยเพิ่มเติม สามารถถามได้เลยนะครับ ยินดีช่วยเสมอ',
-  ];
+  const messageStore = {
+    1: [{ role:'bot', html:'<p>สวัสดีครับ ผมคือ HR Assistant ยินดีให้บริการ<br>คุณต้องการสอบถามเรื่องอะไรครับ?</p>', time:'09:14' }],
+    2: [{ role:'bot', html:'<p>สวัสดีครับ มีอะไรให้ผมช่วยได้บ้างครับ?</p>', time:'เมื่อวาน' }],
+    3: [{ role:'bot', html:'<p>สวัสดีครับ มีอะไรให้ผมช่วยได้บ้างครับ?</p>', time:'เมื่อวาน' }],
+    4: [{ role:'bot', html:'<p>สวัสดีครับ มีอะไรให้ผมช่วยได้บ้างครับ?</p>', time:'15 ม.ค.' }],
+  };
 
-  document.getElementById('initTime').textContent = nowTime();
-  renderHistory();
+  let activeSession = 1;
 
   function nowTime() {
-    return new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    return new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
   }
 
+  // ---- render sidebar history ----
   function renderHistory() {
     const el = document.getElementById('chatHistory');
-    el.innerHTML = sessions.map(s => `
-      <div class="history-item ${activeSession === s.id ? 'active' : ''}" onclick="loadSession(${s.id})">
-        <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span class="history-item-text">${s.title}</span>
-        <span class="history-time">${s.time}</span>
-      </div>
-    `).join('');
+    el.innerHTML = sessions.map(function(s) {
+      return '<div class="history-item ' + (activeSession === s.id ? 'active' : '') + '" onclick="loadSession(' + s.id + ')">'
+        + '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+        + '<span class="history-item-text">' + s.title + '</span>'
+        + '<span class="history-time">' + s.time + '</span>'
+        + '<button class="delete-btn" onclick="deleteSession(event,' + s.id + ')" title="ลบการสนทนา">'
+        + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+        + '</button></div>';
+    }).join('');
   }
 
+  // ---- build a message row HTML string ----
+  function buildMsgHTML(role, html, time) {
+    var isUser = role === 'user';
+    var avatarIcon = isUser
+      ? '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>'
+      : '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+    return '<div class="msg-row ' + (isUser ? 'user' : 'bot') + '">'
+      + '<div class="avatar ' + (isUser ? 'user-av' : '') + '">' + avatarIcon + '</div>'
+      + '<div><div class="bubble">' + html + '</div>'
+      + '<div class="msg-time">' + time + '</div></div></div>';
+  }
+
+  // ---- render messages for active session ----
+  function renderMessages() {
+    var msgs = document.getElementById('messages');
+    var list = messageStore[activeSession] || [];
+    msgs.innerHTML = list.map(function(m) { return buildMsgHTML(m.role, m.html, m.time); }).join('');
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // ---- session actions ----
   function loadSession(id) {
     activeSession = id;
     renderHistory();
+    renderMessages();
+  }
+
+  function deleteSession(event, id) {
+    event.stopPropagation();
+    sessions = sessions.filter(function(s) { return s.id !== id; });
+    delete messageStore[id];
+    if (activeSession === id) {
+      activeSession = sessions.length > 0 ? sessions[0].id : null;
+    }
+    renderHistory();
+    renderMessages();
   }
 
   function newChat() {
-    const id = Date.now();
-    sessions.unshift({ id, title: 'แชทใหม่', time: nowTime() });
+    var id = Date.now();
+    var time = nowTime();
+    sessions.unshift({ id: id, title: 'แชทใหม่', time: time });
+    messageStore[id] = [{ role:'bot', html:'<p>สวัสดีครับ มีอะไรให้ผมช่วยได้บ้างครับ?</p>', time: time }];
     activeSession = id;
     renderHistory();
-    document.getElementById('messages').innerHTML = `
-      <div class="msg-row bot">
-        <div class="avatar">
-          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-        </div>
-        <div>
-          <div class="bubble">สวัสดีครับ มีอะไรให้ผมช่วยได้บ้างครับ?</div>
-          <div class="msg-time">${nowTime()}</div>
-        </div>
-      </div>
-    `;
+    renderMessages();
   }
 
+  // ---- tab switch ----
   function switchTab(view, btn) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
     document.getElementById('view-' + view).classList.add('active');
     document.getElementById('headerTitle').textContent =
       view === 'chat' ? 'สนทนากับ HR Assistant' : 'แจ้งเรื่องถึง HR';
   }
 
+  // ---- input helpers ----
   function autoResize(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
@@ -831,92 +934,88 @@
     document.getElementById('chatInput').value = text;
     sendMessage();
   }
-  const WEBHOOK_URL = 'https://bombam.app.n8n.cloud/webhook/6f17dce6-3aab-4dd9-93ca-159e8f85d1e6/chat';
 
-    async function sendMessage() {
-      const input = document.getElementById('chatInput');
-      const text = input.value.trim();
-      if (!text) return;
-      appendMsg('user', text);
-      input.value = '';
-      input.style.height = 'auto';
-      showTyping();
-      try {
-        const res = await fetch(WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chatInput: text, sessionId: 'web_' + Date.now() })
-        });
-        const data = await res.json();
-        const reply = data.output || data.text || data.response || data.message || JSON.stringify(data);
-        removeTyping();
-        appendMsg('bot', reply);
-      } catch (err) {
-        removeTyping();
-        appendMsg('bot', 'เกิดข้อผิดพลาด: ' + err.message);
-      }
-      const s = sessions.find(x => x.id === activeSession);
-      if (s && s.title === 'แชทใหม่') {
-        s.title = text.slice(0, 18) + (text.length > 18 ? '...' : '');
-        renderHistory();
-      }
-    }
-
-
-
+  // ---- append a message (saves to store + appends to DOM) ----
   function appendMsg(role, text) {
-    const msgs = document.getElementById('messages');
-    const isUser = role === 'user';
-    const avatarIcon = isUser
-      ? `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`
-      : `<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
-    const div = document.createElement('div');
-    div.className = `msg-row ${isUser ? 'user' : 'bot'}`;
-    div.innerHTML = `
-      <div class="avatar ${isUser ? 'user-av' : ''}">${avatarIcon}</div>
-      <div>
-        <div class="bubble">${text}</div>
-        <div class="msg-time">${nowTime()}</div>
-      </div>
-    `;
-    msgs.appendChild(div);
+    var isUser = role === 'user';
+    var html = isUser
+      ? text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')
+      : parseMarkdown(text);
+    var time = nowTime();
+    if (!messageStore[activeSession]) messageStore[activeSession] = [];
+    messageStore[activeSession].push({ role: role, html: html, time: time });
+    var msgs = document.getElementById('messages');
+    var div = document.createElement('div');
+    div.innerHTML = buildMsgHTML(role, html, time);
+    msgs.appendChild(div.firstElementChild);
     msgs.scrollTop = msgs.scrollHeight;
   }
 
   function showTyping() {
-    const msgs = document.getElementById('messages');
-    const el = document.createElement('div');
+    var msgs = document.getElementById('messages');
+    var el = document.createElement('div');
     el.className = 'msg-row bot';
     el.id = 'typingRow';
-    el.innerHTML = `
-      <div class="avatar">
-        <svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-      </div>
-      <div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-    `;
+    el.innerHTML = '<div class="avatar"><svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
+      + '<div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
     msgs.appendChild(el);
     msgs.scrollTop = msgs.scrollHeight;
   }
 
   function removeTyping() {
-    const el = document.getElementById('typingRow');
+    var el = document.getElementById('typingRow');
     if (el) el.remove();
   }
 
+  // ---- send to n8n webhook ----
+  var WEBHOOK_URL = 'https://bombam.app.n8n.cloud/webhook/6f17dce6-3aab-4dd9-93ca-159e8f85d1e6/chat';
+
+  async function sendMessage() {
+    var input = document.getElementById('chatInput');
+    var text = input.value.trim();
+    if (!text) return;
+    appendMsg('user', text);
+    input.value = '';
+    input.style.height = 'auto';
+    showTyping();
+    try {
+      var res = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatInput: text, sessionId: 'web_' + activeSession })
+      });
+      var data = await res.json();
+      var reply = data.output || data.text || data.response || data.message || JSON.stringify(data);
+      removeTyping();
+      appendMsg('bot', reply);
+    } catch (err) {
+      removeTyping();
+      appendMsg('bot', 'เกิดข้อผิดพลาด: ' + err.message);
+    }
+    var s = sessions.find(function(x) { return x.id === activeSession; });
+    if (s && s.title === 'แชทใหม่') {
+      s.title = text.slice(0, 18) + (text.length > 18 ? '...' : '');
+      renderHistory();
+    }
+  }
+
+  // ---- HR form submit ----
   function submitForm() {
-    const fields = ['empId','empName','empPhone','empEmail','empQuestion'];
-    for (let i = 0; i < fields.length; i++) {
+    var fields = ['empId','empName','empPhone','empEmail','empQuestion'];
+    for (var i = 0; i < fields.length; i++) {
       if (!document.getElementById(fields[i]).value.trim()) {
         document.getElementById(fields[i]).focus();
         return;
       }
     }
     document.getElementById('successBanner').classList.add('show');
-    fields.forEach(f => { document.getElementById(f).value = ''; });
-    setTimeout(() => document.getElementById('successBanner').classList.remove('show'), 5000);
+    fields.forEach(function(f) { document.getElementById(f).value = ''; });
+    setTimeout(function() { document.getElementById('successBanner').classList.remove('show'); }, 5000);
   }
+
+  // ---- init ----
+  renderHistory();
+  renderMessages();
 </script>
 </body>
 </html>

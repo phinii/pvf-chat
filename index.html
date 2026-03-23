@@ -147,7 +147,6 @@
   }
   .history-item:hover .history-time { opacity: 0; }
 
-  /* ปุ่มลบประวัติแชท */
   .delete-btn {
     position: absolute;
     right: 8px;
@@ -546,6 +545,7 @@
     transition: background 0.12s;
   }
   .submit-btn:hover { background: var(--accent-hover); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .success-banner {
     display: none;
@@ -561,6 +561,35 @@
     max-width: 600px;
   }
   .success-banner.show { display: flex; }
+
+  /* ---- NEW: error banner ---- */
+  .error-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #dc2626;
+    max-width: 600px;
+  }
+  .error-banner.show { display: flex; }
+
+  /* ---- NEW: submit loading spinner ---- */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .submit-btn.loading .spinner { display: block; }
+  .submit-btn.loading .btn-icon { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   @media (max-width: 640px) {
     .sidebar { display: none; }
@@ -721,6 +750,14 @@
         ส่งข้อมูลเรียบร้อยแล้ว ทีม HR จะติดต่อกลับโดยเร็ว
       </div>
 
+      <!-- NEW: error banner -->
+      <div class="error-banner" id="errorBanner">
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorMsg">เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง</span>
+      </div>
+
       <div class="form-card">
         <div class="form-grid">
           <div class="field">
@@ -776,10 +813,11 @@
             </svg>
             ข้อมูลของคุณจะถูกเก็บเป็นความลับ
           </div>
-          <button class="submit-btn" onclick="submitForm()">
-            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button class="submit-btn" id="submitBtn" onclick="submitForm()">
+            <svg class="icon btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
+            <div class="spinner"></div>
             ส่งเรื่องถึง HR
           </button>
         </div>
@@ -827,7 +865,6 @@
   }
   // ============================================================
 
-  // sessions เก็บ metadata; messageStore เก็บ messages แยกตาม session id
   let sessions = [
     { id: 1, title: 'วันลาป่วยคงเหลือ', time: '09:14' },
     { id: 2, title: 'ขั้นตอนการลาคลอด', time: 'เมื่อวาน' },
@@ -848,7 +885,6 @@
     return new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
   }
 
-  // ---- render sidebar history ----
   function renderHistory() {
     const el = document.getElementById('chatHistory');
     el.innerHTML = sessions.map(function(s) {
@@ -862,7 +898,6 @@
     }).join('');
   }
 
-  // ---- build a message row HTML string ----
   function buildMsgHTML(role, html, time) {
     var isUser = role === 'user';
     var avatarIcon = isUser
@@ -874,7 +909,6 @@
       + '<div class="msg-time">' + time + '</div></div></div>';
   }
 
-  // ---- render messages for active session ----
   function renderMessages() {
     var msgs = document.getElementById('messages');
     var list = messageStore[activeSession] || [];
@@ -882,7 +916,6 @@
     msgs.scrollTop = msgs.scrollHeight;
   }
 
-  // ---- session actions ----
   function loadSession(id) {
     activeSession = id;
     renderHistory();
@@ -910,7 +943,6 @@
     renderMessages();
   }
 
-  // ---- tab switch ----
   function switchTab(view, btn) {
     document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
@@ -920,7 +952,6 @@
       view === 'chat' ? 'สนทนากับ HR Assistant' : 'แจ้งเรื่องถึง HR';
   }
 
-  // ---- input helpers ----
   function autoResize(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
@@ -935,7 +966,6 @@
     sendMessage();
   }
 
-  // ---- append a message (saves to store + appends to DOM) ----
   function appendMsg(role, text) {
     var isUser = role === 'user';
     var html = isUser
@@ -967,7 +997,7 @@
     if (el) el.remove();
   }
 
-  // ---- send to n8n webhook ----
+  // ---- Chat webhook (เดิม) ----
   var WEBHOOK_URL = 'https://bombam.app.n8n.cloud/webhook/6f17dce6-3aab-4dd9-93ca-159e8f85d1e6/chat';
 
   async function sendMessage() {
@@ -999,18 +1029,69 @@
     }
   }
 
-  // ---- HR form submit ----
-  function submitForm() {
-    var fields = ['empId','empName','empPhone','empEmail','empQuestion'];
+  // ============================================================
+  // HR FORM WEBHOOK  ← แก้ URL นี้ให้ตรงกับ n8n ของคุณ
+  // ============================================================
+  var HR_FORM_WEBHOOK_URL = 'https://bombam.app.n8n.cloud/webhook-test/hr-request';
+
+  async function submitForm() {
+    // 1. validate — ทุก field ต้องกรอก
+    var fields = ['empId', 'empName', 'empPhone', 'empEmail', 'empQuestion'];
     for (var i = 0; i < fields.length; i++) {
       if (!document.getElementById(fields[i]).value.trim()) {
         document.getElementById(fields[i]).focus();
         return;
       }
     }
-    document.getElementById('successBanner').classList.add('show');
-    fields.forEach(function(f) { document.getElementById(f).value = ''; });
-    setTimeout(function() { document.getElementById('successBanner').classList.remove('show'); }, 5000);
+
+    // 2. hide banners เก่า
+    document.getElementById('successBanner').classList.remove('show');
+    document.getElementById('errorBanner').classList.remove('show');
+
+    // 3. loading state
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+
+    // 4. build payload — ตรงกับ column ใน Google Sheet
+    var payload = {
+      Employee_ID:    document.getElementById('empId').value.trim(),
+      Employee_Name:  document.getElementById('empName').value.trim(),
+      Employee_Phone: document.getElementById('empPhone').value.trim(),
+      Employee_Email: document.getElementById('empEmail').value.trim(),
+      Question:       document.getElementById('empQuestion').value.trim(),
+      Status:         'Open'
+    };
+
+    // 5. POST ไป n8n webhook
+    try {
+      var res = await fetch(HR_FORM_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) { throw new Error('Server responded ' + res.status); }
+
+      // 6. success
+      fields.forEach(function(f) { document.getElementById(f).value = ''; });
+      document.getElementById('successBanner').classList.add('show');
+      setTimeout(function() {
+        document.getElementById('successBanner').classList.remove('show');
+      }, 5000);
+
+    } catch (err) {
+      // 7. error
+      document.getElementById('errorMsg').textContent = 'ส่งข้อมูลไม่สำเร็จ: ' + err.message;
+      document.getElementById('errorBanner').classList.add('show');
+      setTimeout(function() {
+        document.getElementById('errorBanner').classList.remove('show');
+      }, 6000);
+    }
+
+    // 8. reset button
+    btn.disabled = false;
+    btn.classList.remove('loading');
   }
 
   // ---- init ----
